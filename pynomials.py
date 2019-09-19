@@ -1,5 +1,5 @@
-from matplotlib.pyplot import figure, plot, show
-from numpy import arange
+#from matplotlib.pyplot import figure, plot, show
+#from numpy import arange
 
 class poli:
     def __init__(self, var = 'x', name = 'y'):
@@ -17,6 +17,16 @@ class poli:
         for exp in exponents:
             if self.poli[exp] == 0:
                 del self.poli[exp]
+    
+    def getExponents(self):
+        try:
+            if self.poli[self.c] == self.c:
+                exponents = list(self.poli.keys())
+                exponents.remove(self.c)
+                exponents = sorted(exponents, reverse=True)
+        except:
+            exponents = sorted(self.poli.keys(), reverse=True)
+        return exponents
 
     def add(self, *args):
         for i in args:
@@ -39,13 +49,7 @@ class poli:
 
     def of(self, x):
         result = 0
-        try:
-            if self.poli[self.c] == self.c:
-                exponents = list(self.poli.keys())
-                exponents.remove(self.c)
-                exponents = sorted(exponents, reverse=True)
-        except:
-            exponents = sorted(self.poli.keys(), reverse=True)
+        exponents = self.getExponents()
         for exp in exponents:
             val = self.poli[exp]*x**exp
             result += val
@@ -55,13 +59,7 @@ class poli:
         if name == '':
             name = 'd'+self.name
         self.dpoli = poli(self.var, name)
-        try:
-            if self.poli[self.c] == self.c:
-                exponents = list(self.poli.keys())
-                exponents.remove(self.c)
-                exponents = sorted(exponents, reverse=True)
-        except:
-            exponents = sorted(self.poli.keys(), reverse=True)
+        exponents = self.getExponents()
         for exp in exponents:
             try:
                 self.dpoli.add((self.poli[exp]*exp, exp-1))
@@ -74,13 +72,7 @@ class poli:
         if name == '':
             name = 's'+self.name
         self.spoli = poli(self.var, name)
-        try:
-            if self.poli[self.c] == self.c:
-                exponents = list(self.poli.keys())
-                exponents.remove(self.c)
-                exponents = sorted(exponents, reverse=True)
-        except:
-            exponents = sorted(self.poli.keys(), reverse=True)
+        exponents = self.getExponents()
         for exp in exponents:
             self.spoli.add((self.poli[exp]/(exp+1), exp+1))
         self.spoli.clean()
@@ -93,13 +85,7 @@ class poli:
 
     def show(self):
         writtenPoli = ''
-        try:
-            if self.poli[self.c] == self.c:
-                exponents = list(self.poli.keys())
-                exponents.remove(self.c)
-                exponents = sorted(exponents, reverse=True)
-        except:
-            exponents = sorted(self.poli.keys(), reverse=True)
+        exponents = self.getExponents()
         for exp in exponents:
             try:
                 coef = self.poli[exp]
