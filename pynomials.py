@@ -1,76 +1,76 @@
+from numpy import arange
+from tqdm import tqdm
+import inspect, types
 
-def poliAdd(poli1, poli2):
-    if poli1.var == poli2.var:
-        result = poli(poli1.var, poli1.name + ' + ' + poli2.name)
-        exponents1 = poli1.getExponents()
+def polyAdd(poly1, poly2):
+    if poly1.var == poly2.var:
+        result = poly(poly1.var, '[' + poly1.name + ' + ' + poly2.name + ']')
+        exponents1 = poly1.getExponents()
         for exp in exponents1:
-            result.add((poli1.poli[exp], exp))
-        exponents2 = poli2.getExponents()
+            result.add((poly1.poly[exp], exp))
+        exponents2 = poly2.getExponents()
         for exp in exponents2:
-            result.add((poli2.poli[exp], exp))
+            result.add((poly2.poly[exp], exp))
         return result
     else:
         print("Can't sum different variabel polynomials")
         
-def poliSub(poli1, poli2):
-    if poli1.var == poli2.var:
-        result = poli(poli1.var, poli1.name + ' - ' + poli2.name)
-        exponents1 = poli1.getExponents()
+def polySub(poly1, poly2):
+    if poly1.var == poly2.var:
+        result = poly(poly1.var, '[' + poly1.name + ' - ' + poly2.name + ']')
+        exponents1 = poly1.getExponents()
         for exp in exponents1:
-            result.add((poli1.poli[exp], exp))
-        exponents2 = poli2.getExponents()
+            result.add((poly1.poly[exp], exp))
+        exponents2 = poly2.getExponents()
         for exp in exponents2:
-            result.add((-poli2.poli[exp], exp))
+            result.add((-poly2.poly[exp], exp))
         return result
     else:
         print("Can't subtract different variabel polynomials")
 
-def poliMult(poli1, poli2):
-    if poli1.var == poli2.var:
-        result = poli(poli1.var, poli1.name + ' * ' + poli2.name)
-        exponents1 = poli1.getExponents()
-        exponents2 = poli2.getExponents()
+def polyMult(poly1, poly2):
+    if poly1.var == poly2.var:
+        result = poly(poly1.var, '[' + poly1.name + ' * ' + poly2.name + ']')
+        exponents1 = poly1.getExponents()
+        exponents2 = poly2.getExponents()
         for exp1 in exponents1:
             for exp2 in exponents2: 
-                result.add((poli1.poli[exp1]*poli2.poli[exp2], exp1+exp2))
+                result.add((poly1.poly[exp1]*poly2.poly[exp2], exp1+exp2))
         return result
     else:
         print("Can't multiply different variabel polynomials")
 
-def poliDiv(poli1, poli2):
-    if poli1.var == poli2.var:
-        result = poli(poli1.var, poli1.name + ' / ' + poli2.name)
-        exponents1 = poli1.getExponents()
-        exponents2 = poli2.getExponents()
-        maxExp1 = max(exponents1)
-        maxExp2 = max(exponents2)
-        p1 = poli1
-        p2 = poli2
+def polyDiv(poly1, poly2):
+    if poly1.var == poly2.var:
+        result = poly(poly1.var, '[' + poly1.name + ' / ' + poly2.name + ']')
+        maxExp1 = poly1.degree()
+        maxExp2 = poly2.degree()
+        p1 = poly1
+        p2 = poly2
         while maxExp1 >= maxExp2:
-            coef = p1.poli[maxExp1]/p2.poli[maxExp2]
+            coef = p1.poly[maxExp1]/p2.poly[maxExp2]
             exp = maxExp1-maxExp2
-            p0 = poli(poli1.var, 'p0')
+            p0 = poly(poly1.var, 'p0')
             p0.add((coef, exp))
             result.add((coef, exp))
-            p0 = poliMult(p2, p0)
-            p1 = poliSub(p1, p0)
-            exponents1 = p1.getExponents()
-            maxExp1 = max(exponents1)
+            p0 = polyMult(p2, p0)
+            p1 = polySub(p1, p0)
+            maxExp1 = p1.degree()
         remainder = p1
-        remainder.name = 'Remainder(' + poli1.name + ' / ' + poli2.name + ')'
+        remainder.name = '[Remainder(' + poly1.name + ' / ' + poly2.name + ')]'
         remainder.clean()
         return result, remainder
     else:
         print("Can't divide different variabel polynomials")
 
-def BRDiv(Poli, a):
-    exponents = Poli.getExponents()
+def BRDiv(Poly, a):
+    exponents = Poly.getExponents()
     coefs = []
-    result = poli(Poli.var, Poli.name + '/({}-('.format(Poli.var) + str(a) + '))')
+    result = poly(Poly.var, Poly.name + '/({}-('.format(Poly.var) + str(a) + '))')
     for exp in exponents:
-        coefs.append(Poli.poli[exp])
+        coefs.append(Poly.poly[exp])
     remainder = 0
-    maxExp = max(exponents) - 1
+    maxExp = Poly.degree() - 1
     for i in coefs:
         remainder = remainder*a + i
         result.add((remainder, maxExp))
@@ -79,7 +79,7 @@ def BRDiv(Poli, a):
 
 def intDivisors(x):
     divs = []
-    maxdiv = int(x**0.5 + 1)
+    maxdiv = int(abs(x)**0.5 + 1)
     for i in range(1, maxdiv):
         if x % i == 0:
             if i != x/i:
@@ -89,42 +89,66 @@ def intDivisors(x):
                 divs.append(x)
     return sorted(divs)
 
-class poli:
-    def __init__(self, var = 'x', name = 'y'):
-        self.poli = {}
+class poly:
+    def __init__(self, var = 'x', name = 'y', *terms):
+        '''
+        var: poly variable
+        name: poly name
+        terms: either a function or a series of poly Terms (coeficient, exponent) (examples):
+            def f(x):
+                y = x**2 + 2*x + 1
+                return y
+            or
+            def f(x):
+                return x**2 + 2*x + 1
+
+            or
+
+            (1,2), (2,1), (1)
+        
+        '''
+        self.poly = {}
         self.var = var
         if self.var == 'c':
             self.c = 'const'
         else:
             self.c = 'c'
         self.name = name
-        self.integreted = False
+        
+        for i in terms:
+            if isinstance(i, tuple, list, int, float):
+                self.add(i)
+            #elif isinstance(i, types.FunctionType):
+            #    self.addFuntion(i)
 
     def clean(self):
-        exponents = sorted(self.poli.keys(), reverse=True)
+        exponents = sorted(self.poly.keys(), reverse=True)
         for exp in exponents:
-            if self.poli[exp] == 0:
-                del self.poli[exp]
+            if self.poly[exp] == 0:
+                del self.poly[exp]
         try:
-            if self.poli[self.c] == self.c:
-                del self.poli[self.c]
+            if self.poly[self.c] == self.c:
+                del self.poly[self.c]
         except:
             pass
-        if self.poli == {}:
-            self.poli = {0: 0}
+        if self.poly == {}:
+            self.poly = {0: 0}
     
     def getExponents(self, reverse=True):
         try:
-            if self.poli[self.c] == self.c:
-                exponents = list(self.poli.keys())
+            if self.poly[self.c] == self.c:
+                exponents = list(self.poly.keys())
                 exponents.remove(self.c)
                 exponents = sorted(exponents, reverse=reverse)
         except:
-            exponents = sorted(self.poli.keys(), reverse=reverse)
+            exponents = sorted(self.poly.keys(), reverse=reverse)
         return exponents
 
-    def add(self, *args):
-        for i in args:
+    def degree(self):
+        return max(self.getExponents())
+
+    def add(self, *terms):
+        for i in terms:
             try:
                 i = float(i)
                 coeficient = i
@@ -136,83 +160,125 @@ class poli:
                 elif len(i) == 2:
                     coeficient = i[0]
                     exponent = i[1]
-            if exponent in self.poli.keys():
-                self.poli[exponent] += float(coeficient)
+            if exponent in self.poly.keys():
+                self.poly[exponent] += float(coeficient)
             else:
-                self.poli[exponent] = float(coeficient)
+                self.poly[exponent] = float(coeficient)
         self.clean()
-
+        
     def of(self, x):
         self.clean()
         result = 0
         exponents = self.getExponents()
         for exp in exponents:
-            val = self.poli[exp]*x**exp
+            val = self.poly[exp]*x**exp
             result += val
         return result
 
+    def roots(self, tryInt=True):
+        deg = self.degree()
+        roots = []
+        if deg == 1:
+            a = self.poly[1]
+            b = self.poly[0]
+            roots.append(-b/a)
+
+        elif deg == 2:
+            a = self.poly[2]
+            b = self.poly[1]
+            c = self.poly[0]
+            delta = b**2 -4*a*c
+            if delta == 0:
+                roots.append(-b/(2*a))
+            else:
+                roots.append((-b+delta**0.5)/(2*a))
+                roots.append((-b-(delta**0.5))/(2*a))
+        else:
+            if tryInt == True:
+                try:
+                    intRoots, remainder = self.intRoots()
+                    for i in intRoots:
+                        roots.append(i)
+                    newRoots = remainder.roots(tryInt=False)
+                    for i in newRoots:
+                        roots.append(i)
+                except:
+                    pass
+            else:
+                if len(roots) == 0:
+                    return ["Couldn't find the roots of the poly"]
+                else:
+                    return ["Could only find these roots: ", roots]    
+        return roots
+
     def intRoots(self):
         try:
-            possibleDivs = intDivisors(self.poli[0])
+            possibleDivs = intDivisors(self.poly[0])
         except:
             possibleDivs = [0]
         roots = []
-        poli = self
+        poly = self
         while True:
-            exponents = poli.getExponents()
+            exponents = poly.getExponents()
             if len(exponents) == 0:
                 break
-            oldpoli = poli
+            oldpoly = poly
             for i in possibleDivs:
-                newpoli, rpos = BRDiv(poli, i)
+                newpoly, rpos = BRDiv(poly, i)
                 if rpos == 0:
                     roots.append(i)
-                    poli = newpoli
+                    poly = newpoly
                     continue
-                newpoli, rneg = BRDiv(poli, -i)
+                newpoly, rneg = BRDiv(poly, -i)
                 if rneg == 0:
                     roots.append(-i)
-                    poli = newpoli
+                    poly = newpoly
                     continue
-            poli.show()
-            if poli == oldpoli :
+            if poly == oldpoly :
                 break
+        return roots, poly
+
+    def extensiveRootSearch(self, start, end, increment=0.01):
+        roots = []
+        for i in tqdm(arange(start, end, increment)):
+            if self.of(i) == 0:
+                roots.append(i)
         return roots
 
     def derive(self, name=''):
         if name == '':
             name = 'd'+self.name
-        self.dpoli = poli(self.var, name)
+        self.dpoly = poly(self.var, name)
         exponents = self.getExponents()
         for exp in exponents:
             try:
-                self.dpoli.add((self.poli[exp]*exp, exp-1))
+                self.dpoly.add((self.poly[exp]*exp, exp-1))
             except:
                 pass
-        self.dpoli.clean()
-        return self.dpoli
+        self.dpoly.clean()
+        return self.dpoly
     
     def integrate(self, name=''):
         if name == '':
             name = 's'+self.name
-        self.spoli = poli(self.var, name)
+        self.spoly = poly(self.var, name)
         exponents = self.getExponents()
         for exp in exponents:
-            self.spoli.add((self.poli[exp]/(exp+1), exp+1))
-        self.spoli.clean()
-        self.spoli.poli[self.c] = self.c
-        return self.spoli
+            self.spoly.add((self.poly[exp]/(exp+1), exp+1))
+        self.spoly.clean()
+        self.spoly.poly[self.c] = self.c
+        return self.spoly
 
     def defIntegrate(self, start, end):
         integral = self.integrate()
         return integral.of(end) - integral.of(start)
 
     def show(self):
-        writtenPoli = ''
+        writtenPoly = ''
         exponents = self.getExponents()
         for exp in exponents:
             try:
-                coef = self.poli[exp]
+                coef = self.poly[exp]
                 
                 if coef > 0:
                     signal = '+'
@@ -239,14 +305,14 @@ class poli:
 
                 if coef == 0:
                     writtenTerm = ''
-                writtenPoli += writtenTerm
-                if self.poli == {0: 0}:
-                    writtenPoli = ' 0'
+                writtenPoly += writtenTerm
+                if self.poly == {0: 0}:
+                    writtenPoly = ' 0'
             except:
                 pass
         try:
-            if self.poli[self.c] == self.c:
-                writtenPoli += ' + c'
+            if self.poly[self.c] == self.c:
+                writtenPoly += ' + c'
         except:
             pass
-        print(self.name + ' =' + writtenPoli)
+        print(self.name + ' =' + writtenPoly)
