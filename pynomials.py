@@ -1,318 +1,289 @@
-from numpy import arange
-from tqdm import tqdm
-import inspect, types
+import math
 
-def polyAdd(poly1, poly2):
-    if poly1.var == poly2.var:
-        result = poly(poly1.var, '[' + poly1.name + ' + ' + poly2.name + ']')
-        exponents1 = poly1.getExponents()
-        for exp in exponents1:
-            result.add((poly1.poly[exp], exp))
-        exponents2 = poly2.getExponents()
-        for exp in exponents2:
-            result.add((poly2.poly[exp], exp))
-        return result
-    else:
-        print("Can't sum different variabel polynomials")
-        
-def polySub(poly1, poly2):
-    if poly1.var == poly2.var:
-        result = poly(poly1.var, '[' + poly1.name + ' - ' + poly2.name + ']')
-        exponents1 = poly1.getExponents()
-        for exp in exponents1:
-            result.add((poly1.poly[exp], exp))
-        exponents2 = poly2.getExponents()
-        for exp in exponents2:
-            result.add((-poly2.poly[exp], exp))
-        return result
-    else:
-        print("Can't subtract different variabel polynomials")
 
-def polyMult(poly1, poly2):
-    if poly1.var == poly2.var:
-        result = poly(poly1.var, '[' + poly1.name + ' * ' + poly2.name + ']')
-        exponents1 = poly1.getExponents()
-        exponents2 = poly2.getExponents()
-        for exp1 in exponents1:
-            for exp2 in exponents2: 
-                result.add((poly1.poly[exp1]*poly2.poly[exp2], exp1+exp2))
-        return result
-    else:
-        print("Can't multiply different variabel polynomials")
+class Pynomial:
+    def __init__(self, l, r):
+        # l = Const(l) if isinstance(l, (int, float)) else l
+        # r = Const(r) if isinstance(r, (int, float)) else r
+        self.l = l
+        self.r = r
 
-def polyDiv(poly1, poly2):
-    if poly1.var == poly2.var:
-        result = poly(poly1.var, '[' + poly1.name + ' / ' + poly2.name + ']')
-        maxExp1 = poly1.degree()
-        maxExp2 = poly2.degree()
-        p1 = poly1
-        p2 = poly2
-        while maxExp1 >= maxExp2:
-            coef = p1.poly[maxExp1]/p2.poly[maxExp2]
-            exp = maxExp1-maxExp2
-            p0 = poly(poly1.var, 'p0')
-            p0.add((coef, exp))
-            result.add((coef, exp))
-            p0 = polyMult(p2, p0)
-            p1 = polySub(p1, p0)
-            maxExp1 = p1.degree()
-        remainder = p1
-        remainder.name = '[Remainder(' + poly1.name + ' / ' + poly2.name + ')]'
-        remainder.clean()
-        return result, remainder
-    else:
-        print("Can't divide different variabel polynomials")
+    def __str__(self):
+        return ''
 
-def BRDiv(Poly, a):
-    exponents = Poly.getExponents()
-    coefs = []
-    result = poly(Poly.var, Poly.name + '/({}-('.format(Poly.var) + str(a) + '))')
-    for exp in exponents:
-        coefs.append(Poly.poly[exp])
-    remainder = 0
-    maxExp = Poly.degree() - 1
-    for i in coefs:
-        remainder = remainder*a + i
-        result.add((remainder, maxExp))
-        maxExp -= 1
-    return result, remainder
+    def __add__(self, b):
+        return Add(self, b)
 
-def intDivisors(x):
-    divs = []
-    maxdiv = int(abs(x)**0.5 + 1)
-    for i in range(1, maxdiv):
-        if x % i == 0:
-            if i != x/i:
-                divs.append(i)
-                divs.append(x/i)
-            else: 
-                divs.append(x)
-    return sorted(divs)
+    def __sub__(self, b):
+        return Sub(self, b)
 
-class poly:
-    def __init__(self, var = 'x', name = 'y', *terms):
-        '''
-        var: poly variable
-        name: poly name
-        terms: either a function or a series of poly Terms (coeficient, exponent) (examples):
-            def f(x):
-                y = x**2 + 2*x + 1
-                return y
-            or
-            def f(x):
-                return x**2 + 2*x + 1
+    def __mul__(self, b):
+        return Mult(self, b)
 
-            or
+    def __truediv__(self, b):
+        return Div(self, b)
 
-            (1,2), (2,1), (1)
-        
-        '''
-        self.poly = {}
-        self.var = var
-        if self.var == 'c':
-            self.c = 'const'
-        else:
-            self.c = 'c'
+    def __pow__(self, b):
+        return Pow(self, b)
+
+    def __radd__(self, b):
+        return Add(b, self)
+
+    def __rsub__(self, b):
+        return Sub(b, self)
+
+    def __rmul__(self, b):
+        return Mult(b, self)
+
+    def __rtruediv__(self, b):
+        return Div(b, self)
+
+    def __rpow__(self, b):
+        return Pow(b, self)
+
+    def value(self, **env):
+        pass
+
+    def differenciate(self, variable):
+        pass
+
+    def __integrate(self, variable):
+        pass
+
+
+class Const (Pynomial):
+    def __init__(self, c):
+        self.c = c
+
+    def __str__(self):
+        return str(self.c)
+
+    def value(self, **env):
+        return self.c
+
+    def differenciate(self, variable):
+        return 0
+
+    def __integrate(self, variable):
+        return self*Var(variable)
+
+
+
+class Var (Pynomial):
+    def __init__(self, name):
         self.name = name
-        
-        for i in terms:
-            if isinstance(i, tuple, list, int, float):
-                self.add(i)
-            #elif isinstance(i, types.FunctionType):
-            #    self.addFuntion(i)
 
-    def clean(self):
-        exponents = sorted(self.poly.keys(), reverse=True)
-        for exp in exponents:
-            if self.poly[exp] == 0:
-                del self.poly[exp]
-        try:
-            if self.poly[self.c] == self.c:
-                del self.poly[self.c]
-        except:
-            pass
-        if self.poly == {}:
-            self.poly = {0: 0}
-    
-    def getExponents(self, reverse=True):
-        try:
-            if self.poly[self.c] == self.c:
-                exponents = list(self.poly.keys())
-                exponents.remove(self.c)
-                exponents = sorted(exponents, reverse=reverse)
-        except:
-            exponents = sorted(self.poly.keys(), reverse=reverse)
-        return exponents
+    def __str__(self):
+        return self.name
 
-    def degree(self):
-        return max(self.getExponents())
-
-    def add(self, *terms):
-        for i in terms:
-            try:
-                i = float(i)
-                coeficient = i
-                exponent = 0
-            except:
-                if len(i) == 1:
-                    coeficient = i[0]
-                    exponent = 0
-                elif len(i) == 2:
-                    coeficient = i[0]
-                    exponent = i[1]
-            if exponent in self.poly.keys():
-                self.poly[exponent] += float(coeficient)
-            else:
-                self.poly[exponent] = float(coeficient)
-        self.clean()
-        
-    def of(self, x):
-        self.clean()
-        result = 0
-        exponents = self.getExponents()
-        for exp in exponents:
-            val = self.poly[exp]*x**exp
-            result += val
-        return result
-
-    def roots(self, tryInt=True):
-        deg = self.degree()
-        roots = []
-        if deg == 1:
-            a = self.poly[1]
-            b = self.poly[0]
-            roots.append(-b/a)
-
-        elif deg == 2:
-            a = self.poly[2]
-            b = self.poly[1]
-            c = self.poly[0]
-            delta = b**2 -4*a*c
-            if delta == 0:
-                roots.append(-b/(2*a))
-            else:
-                roots.append((-b+delta**0.5)/(2*a))
-                roots.append((-b-(delta**0.5))/(2*a))
+    def value(self, **env):
+        if self.name in env.keys():
+            return env[self.name]
         else:
-            if tryInt == True:
-                try:
-                    intRoots, remainder = self.intRoots()
-                    for i in intRoots:
-                        roots.append(i)
-                    newRoots = remainder.roots(tryInt=False)
-                    for i in newRoots:
-                        roots.append(i)
-                except:
-                    pass
-            else:
-                if len(roots) == 0:
-                    return ["Couldn't find the roots of the poly"]
-                else:
-                    return ["Could only find these roots: ", roots]    
-        return roots
+            return 0
 
-    def intRoots(self):
-        try:
-            possibleDivs = intDivisors(self.poly[0])
-        except:
-            possibleDivs = [0]
-        roots = []
-        poly = self
-        while True:
-            exponents = poly.getExponents()
-            if len(exponents) == 0:
-                break
-            oldpoly = poly
-            for i in possibleDivs:
-                newpoly, rpos = BRDiv(poly, i)
-                if rpos == 0:
-                    roots.append(i)
-                    poly = newpoly
-                    continue
-                newpoly, rneg = BRDiv(poly, -i)
-                if rneg == 0:
-                    roots.append(-i)
-                    poly = newpoly
-                    continue
-            if poly == oldpoly :
-                break
-        return roots, poly
+    def differenciate(self, variable):
+        if variable == self.name:
+            return 1
+        return 0
 
-    def extensiveRootSearch(self, start, end, increment=0.01):
-        roots = []
-        for i in tqdm(arange(start, end, increment)):
-            if self.of(i) == 0:
-                roots.append(i)
-        return roots
+    def __integrate(self, variable):
+        if variable == self.name:
+            return self**2/2
+        return self*Var(variable)
 
-    def derive(self, name=''):
-        if name == '':
-            name = 'd'+self.name
-        self.dpoly = poly(self.var, name)
-        exponents = self.getExponents()
-        for exp in exponents:
-            try:
-                self.dpoly.add((self.poly[exp]*exp, exp-1))
-            except:
-                pass
-        self.dpoly.clean()
-        return self.dpoly
-    
-    def integrate(self, name=''):
-        if name == '':
-            name = 's'+self.name
-        self.spoly = poly(self.var, name)
-        exponents = self.getExponents()
-        for exp in exponents:
-            self.spoly.add((self.poly[exp]/(exp+1), exp+1))
-        self.spoly.clean()
-        self.spoly.poly[self.c] = self.c
-        return self.spoly
+class Add (Pynomial):
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if l == '0' and r == '0':
+            return '0'
+        elif l == '0':
+            return r
+        elif r == '0':
+            return l
+        return f'({l} + {r})'
 
-    def defIntegrate(self, start, end):
-        integral = self.integrate()
-        return integral.of(end) - integral.of(start)
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
+        return l + r
 
-    def show(self):
-        writtenPoly = ''
-        exponents = self.getExponents()
-        for exp in exponents:
-            try:
-                coef = self.poly[exp]
-                
-                if coef > 0:
-                    signal = '+'
-                elif coef < 0:
-                    signal = '-'
-                else:
-                    signal = ''
+    def differenciate(self, variable):
+        l = 0 if isinstance(self.l, (int, float)
+                            ) else self.l.differenciate(variable)
+        r = 0 if isinstance(self.r, (int, float)
+                            ) else self.r.differenciate(variable)
+        return l + r
 
-                if abs(coef) == 1 and exp != 0:
-                    writtenCoef = ''
-                elif exp == 0:
-                    writtenCoef = str(abs(coef))
-                else:
-                    writtenCoef = str(abs(coef)) + '*'
 
-                if exp == 0:
-                    writtenExp = ''
-                elif exp == 1:
-                    writtenExp = '{}'.format(self.var)
-                else:
-                    writtenExp = '{}^'.format(self.var) + str(exp)
-                
-                writtenTerm = ' ' + signal + ' ' + writtenCoef + writtenExp
+class Sub (Pynomial):
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if l == '0' and r == '0':
+            return '0'
+        elif l == '0':
+            return '-' + r
+        elif r == '0':
+            return l
+        return f'({l} - {r})'
 
-                if coef == 0:
-                    writtenTerm = ''
-                writtenPoly += writtenTerm
-                if self.poly == {0: 0}:
-                    writtenPoly = ' 0'
-            except:
-                pass
-        try:
-            if self.poly[self.c] == self.c:
-                writtenPoly += ' + c'
-        except:
-            pass
-        print(self.name + ' =' + writtenPoly)
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
+        return l - r
+
+    def differenciate(self, variable):
+        l = 0 if isinstance(self.l, (int, float)
+                            ) else self.l.differenciate(variable)
+        r = 0 if isinstance(self.r, (int, float)
+                            ) else self.r.differenciate(variable)
+        return l-r
+
+
+class Mult (Pynomial):
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if l == '0' or r == '0':
+            return '0'
+        elif l == '1':
+            return r
+        elif r == '1':
+            return l
+        return f'({l} * {r})'
+
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
+        return l * r
+
+    def differenciate(self, variable):
+        u = self.l
+        du = 0 if isinstance(u, (int, float)
+                             ) else u.differenciate(variable)
+        v = self.r
+        dv = 0 if isinstance(v, (int, float)
+                             ) else v.differenciate(variable)
+        return du*v + u*dv
+
+
+class Div (Pynomial):
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if r == '0':
+            raise ZeroDivisionError
+        elif l == '0':
+            return '0'
+        elif r == '1':
+            return l
+        return f'({l} / {r})'
+
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
+        return l / r
+
+    def differenciate(self, variable):
+        u = self.l
+        du = 0 if isinstance(u, (int, float)
+                             ) else u.differenciate(variable)
+        v = self.r
+        dv = 0 if isinstance(v, (int, float)
+                             ) else v.differenciate(variable)
+        return (du*v - dv*u) / v**2
+
+
+class Pow (Pynomial):
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if r == '0':
+            return '1'
+        elif l == '0':
+            return '0'
+        elif r == '1':
+            return l
+        return f'({l} ** {r})'
+
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
+        return l ** r
+
+    def differenciate(self, variable):
+        u = self.l
+        du = 0 if isinstance(u, (int, float)
+                             ) else u.differenciate(variable)
+        v = self.r
+        dv = 0 if isinstance(v, (int, float)
+                             ) else v.differenciate(variable)
+        return (v)*du*u**(v-1) + dv*Ln(u)*u**v
+
+
+class Root (Pow):
+    def __init__(self, base, x):
+        super().__init__(x, 1/base)
+
+
+class SquareRoot(Root):
+    def __init__(self, x):
+        super().__init__(2, x)
+
+
+class CubicRoot(Root):
+    def __init__(self, x):
+        super().__init__(3, x)
+
+
+class Log (Pynomial):
+    def __init__(self, base, x):
+        super().__init__(x, base)
+
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if r == '0':
+            raise ValueError('math domain error')
+        elif l == '1':
+            return '0'
+        elif r == l:
+            return '1'
+        return f'log{str(self.r)} {str(self.l)}'
+
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
+        return math.log(l, r)
+
+    def differenciate(self, variable):
+        u = self.l
+        du = 0 if isinstance(u, (int, float)
+                             ) else u.differenciate(variable)
+        return (du/u) * Log(self.r, math.e)
+
+
+class Ln(Log):
+    def __init__(self, x):
+        super().__init__(math.e, x)
+
+    def __str__(self):
+        l = str(self.l)
+        r = str(self.r)
+        if l == '1':
+            return '0'
+        elif r == l:
+            return '1'
+        return f'ln {str(self.l)}'
+
+    def value(self, **env):
+        l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
+        return math.log(l)
+
+    def differenciate(self, variable):
+        u = self.l
+        du = 0 if isinstance(u, (int, float)
+                             ) else u.differenciate(variable)
+        return (du/u)
