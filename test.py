@@ -1,13 +1,25 @@
-import pynomials as pn
+from expression import Var
 
-x = pn.Var('x')
-y = pn.Var('y')
+x = Var('x')
+y = Var('y')
 
-f = x*y**3 + 3*x**2*y + pn.const_e**(x*y)
+f = x**2 + x*y + y**2 + 3*x - 3*y + 4
 
-print(f)
-print(f.value(x=1, y=1))
+fx = f.differenciate(x)
+fxx = f.differenciate(x,2)
+fy = f.differenciate(y)
+fyy = f.differenciate(y, 2)
+fxy = fx.differenciate(y)
+fyx = fy.differenciate(x)
 
-fx = f.differenciate('x')
-print(fx)
-print(fx.value(x=1, y=1))
+h = fxx*fyy - fxy*fyx
+
+print('fx =', fx)
+print('fy =', fy)
+print()
+print('fxx =', fxx)
+print('fxy =', fxy)
+print('fyy =', fyy)
+print('fyx =', fyx)
+print()
+print('h =', h)
