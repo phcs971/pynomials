@@ -76,11 +76,11 @@ class Expression:
     def value(self, **env):
         pass
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         result = self
         for _ in range(n):
             result = 0 if isinstance(result, (int, float)
-                                     ) else result.differenciate(variable, 1)
+                                     ) else result.diff(variable, 1)
         return result
 
     def dependsOn(self, variable):
@@ -104,7 +104,7 @@ class Const (Expression):
     def value(self, **env):
         return self.c
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         return 0
 
     def dependsOn(self, variable):
@@ -125,7 +125,7 @@ class Var (Expression):
         else:
             return 0
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -144,6 +144,7 @@ class Var (Expression):
             return variable == self.name
         elif isinstance(variable, Var):
             return variable.name == self.name
+
 
 class Add (Expression):
     def __str__(self):
@@ -166,21 +167,21 @@ class Add (Expression):
         r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
         return l + r
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
             return self
         elif n == 1:
             l = 0 if isinstance(self.l, (int, float)
-                                ) else self.l.differenciate(variable)
+                                ) else self.l.diff(variable)
             r = 0 if isinstance(self.r, (int, float)
-                                ) else self.r.differenciate(variable)
+                                ) else self.r.diff(variable)
             return l + r
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
-    priority=1
+    priority = 1
 
 
 class Sub (Expression):
@@ -204,21 +205,21 @@ class Sub (Expression):
         r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
         return l - r
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
             return self
         elif n == 1:
             l = 0 if isinstance(self.l, (int, float)
-                                ) else self.l.differenciate(variable)
+                                ) else self.l.diff(variable)
             r = 0 if isinstance(self.r, (int, float)
-                                ) else self.r.differenciate(variable)
+                                ) else self.r.diff(variable)
             return l - r
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
-    priority=1
+    priority = 1
 
 
 class Mult (Expression):
@@ -246,7 +247,7 @@ class Mult (Expression):
         r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
         return l * r
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -254,15 +255,15 @@ class Mult (Expression):
         elif n == 1:
             u = self.l
             du = 0 if isinstance(u, (int, float)
-                                 ) else u.differenciate(variable)
+                                 ) else u.diff(variable)
             v = self.r
             dv = 0 if isinstance(v, (int, float)
-                                 ) else v.differenciate(variable)
+                                 ) else v.diff(variable)
             return du*v + u*dv
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
-    priority=2
+    priority = 2
 
 
 class Div (Expression):
@@ -286,7 +287,7 @@ class Div (Expression):
         r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
         return l / r
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -294,15 +295,15 @@ class Div (Expression):
         elif n == 1:
             u = self.l
             du = 0 if isinstance(u, (int, float)
-                                 ) else u.differenciate(variable)
+                                 ) else u.diff(variable)
             v = self.r
             dv = 0 if isinstance(v, (int, float)
-                                 ) else v.differenciate(variable)
+                                 ) else v.diff(variable)
             return (du*v - dv*u) / v**2
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
-    priority=2
+    priority = 2
 
 
 class Pow (Expression):
@@ -326,7 +327,7 @@ class Pow (Expression):
         r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
         return l ** r
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -334,15 +335,15 @@ class Pow (Expression):
         elif n == 1:
             u = self.l
             du = 0 if isinstance(u, (int, float)
-                                 ) else u.differenciate(variable)
+                                 ) else u.diff(variable)
             v = self.r
             dv = 0 if isinstance(v, (int, float)
-                                 ) else v.differenciate(variable)
+                                 ) else v.diff(variable)
             return (v)*du*u**(v-1) + dv*Ln(u)*u**v
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
-    priority=3
+    priority = 3
 
 
 class Root (Pow):
@@ -360,7 +361,7 @@ class CubicRoot(Root):
         super().__init__(3, x, layer=layer)
 
 
-class Log (Expression):
+class Log(Expression):
     def __init__(self, base, x, layer=0):
         super().__init__(x, base, layer=layer)
 
@@ -384,7 +385,7 @@ class Log (Expression):
         r = self.r if isinstance(self.r, (int, float)) else self.r.value(**env)
         return math.log(l, r)
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -392,12 +393,12 @@ class Log (Expression):
         elif n == 1:
             u = self.l
             du = 0 if isinstance(u, (int, float)
-                                 ) else u.differenciate(variable)
+                                 ) else u.diff(variable)
             return (du/u) * Log(self.r, math.e)
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
-    priority=3
+    priority = 3
 
 
 class Ln(Log):
@@ -417,14 +418,14 @@ class Ln(Log):
         l = self.l if isinstance(self.l, (int, float)) else self.l.value(**env)
         return math.log(l)
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         u = self.l
         du = 0 if isinstance(u, (int, float)
-                             ) else u.differenciate(variable)
+                             ) else u.diff(variable)
         return (du/u)
 
 
-class Trignometric(Expression):
+class Trigonometric(Expression):
     def __init__(self, x, parent=0, layer=0):
         super().__init__(x, 1, parent=parent, layer=layer)
         self.x = x
@@ -432,7 +433,7 @@ class Trignometric(Expression):
         self.layer = layer
 
 
-class Sin(Trignometric):
+class Sin(Trigonometric):
     def __str__(self):
         if isinstance(self.x, (int, float, Const)):
             val = self.value()
@@ -443,7 +444,7 @@ class Sin(Trignometric):
         x = self.x if isinstance(self.x, (int, float)) else self.x.value(**env)
         return math.sin(x)
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -451,17 +452,17 @@ class Sin(Trignometric):
         elif n == 1:
             u = self.x
             du = 0 if isinstance(u, (int, float)
-                                 ) else u.differenciate(variable)
+                                 ) else u.diff(variable)
             return Cos(u, parent=self.parent, layer=self.layer)*du
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
     def dependsOn(self, variable):
         return not isinstance(
             self.x, (int, float)) and self.x.dependsOn(variable)
 
 
-class Cos(Trignometric):
+class Cos(Trigonometric):
     def __str__(self):
         if isinstance(self.x, (int, float, Const)):
             val = self.value()
@@ -472,7 +473,7 @@ class Cos(Trignometric):
         x = self.x if isinstance(self.x, (int, float)) else self.x.value(**env)
         return math.cos(x)
 
-    def differenciate(self, variable, n=1):
+    def diff(self, variable, n=1):
         if not isinstance(n, int) and n < 0:
             raise ValueError('n must be a positive integer')
         if n == 0:
@@ -480,29 +481,27 @@ class Cos(Trignometric):
         elif n == 1:
             u = self.x
             du = 0 if isinstance(u, (int, float)
-                                 ) else u.differenciate(variable)
+                                 ) else u.diff(variable)
             return (-1)*Sin(u, parent=self.parent, layer=self.layer)*du
         else:
-            return super().differenciate(variable, n=n)
+            return super().diff(variable, n=n)
 
     def dependsOn(self, variable):
         return not isinstance(
             self.x, (int, float)) and self.x.dependsOn(variable)
 
 
-class Tan(Trignometric):
+class Tan(Trigonometric):
     pass
 
 
-class Sec(Trignometric):
+class Sec(Trigonometric):
     pass
 
 
-class Cossec(Trignometric):
+class Cossec(Trigonometric):
     pass
 
 
-class Cotan(Trignometric):
+class Cotan(Trigonometric):
     pass
-
-

@@ -5,12 +5,12 @@ y = Var('y')
 
 f = x**2 + x*y + y**2 + 3*x - 3*y + 4
 
-fx = f.differenciate(x)
-fxx = f.differenciate(x,2)
-fy = f.differenciate(y)
-fyy = f.differenciate(y, 2)
-fxy = fx.differenciate(y)
-fyx = fy.differenciate(x)
+fx = f.diff(x)
+fxx = f.diff(x,2)
+fy = f.diff(y)
+fyy = f.diff(y, 2)
+fxy = fx.diff(y)
+fyx = fy.diff(x)
 
 h = fxx*fyy - fxy*fyx
 
